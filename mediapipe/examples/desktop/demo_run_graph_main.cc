@@ -40,6 +40,12 @@ ABSL_FLAG(std::string, output_video_path, "",
           "Full path of where to save result (.mp4 only). "
           "If not provided, show result in a window.");
 
+ABSL_FLAG(std::string, input_side_packets, "",
+          "Comma-separated list of key=value pairs specifying side packets "
+          "for the CalculatorGraph. All values will be treated as the "
+          "string type even if they represent doubles, floats, etc.");
+
+
 absl::Status RunMPPGraph() {
   std::string calculator_graph_config_contents;
   MP_RETURN_IF_ERROR(mediapipe::file::GetContents(
@@ -51,9 +57,22 @@ absl::Status RunMPPGraph() {
       mediapipe::ParseTextProtoOrDie<mediapipe::CalculatorGraphConfig>(
           calculator_graph_config_contents);
 
+  std::map<std::string, mediapipe::Packet> input_side_packets;
+  if (!absl::GetFlag(FLAGS_input_side_packets).empty()) {
+    std::vector<std::string> kv_pairs =
+        absl::StrSplit(absl::GetFlag(FLAGS_input_side_packets), ',');
+    for (const std::string& kv_pair : kv_pairs) {
+      std::vector<std::string> name_and_value = absl::StrSplit(kv_pair, '=');
+      RET_CHECK(name_and_value.size() == 2);
+      RET_CHECK(!mediapipe::ContainsKey(input_side_packets, name_and_value[0]));
+      input_side_packets[name_and_value[0]] =
+          mediapipe::MakePacket<std::string>(name_and_value[1]);
+    }
+  }
+  
   LOG(INFO) << "Initialize the calculator graph.";
   mediapipe::CalculatorGraph graph;
-  MP_RETURN_IF_ERROR(graph.Initialize(config));
+  MP_RETURN_IF_ERROR(graph.Initialize(config, input_side_packets));
 
   LOG(INFO) << "Initialize the camera or load the video.";
   cv::VideoCapture capture;

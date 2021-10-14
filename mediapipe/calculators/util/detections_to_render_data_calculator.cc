@@ -180,6 +180,7 @@ absl::Status DetectionsToRenderDataCalculator::Process(CalculatorContext* cc) {
     for (const auto& detection :
          cc->Inputs().Tag(kDetectionsTag).Get<std::vector<Detection>>()) {
       AddDetectionToRenderData(detection, options, render_data.get());
+      //LOG(INFO) << "Detection Score:" << detection.score(0);
     }
   }
   if (has_single_detection) {

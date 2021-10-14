@@ -32,3 +32,11 @@ cc_binary(
         "//mediapipe/graphs/object_detection_3d:desktop_cpu_calculators",
     ],
 )
+
+cc_binary(
+    name = "objectron_cpu_live",
+    deps = [
+        "//mediapipe/examples/desktop:demo_run_graph_main",
+        "//mediapipe/graphs/object_detection_3d:desktop_cpu_calculators",
+    ],
+)

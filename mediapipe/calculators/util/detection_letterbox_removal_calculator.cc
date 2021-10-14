@@ -140,6 +140,8 @@ class DetectionLetterboxRemovalCalculator : public CalculatorBase {
         keypoint->set_y(new_y);
       }
 
+      //LOG(INFO) << ">>>>>> Detection Score:" << new_detection.score(0);
+
       output_detections->emplace_back(new_detection);
     }
 

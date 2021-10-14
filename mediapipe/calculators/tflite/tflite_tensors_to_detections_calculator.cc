@@ -252,6 +252,7 @@ absl::Status TfLiteTensorsToDetectionsCalculator::Open(CalculatorContext* cc) {
 
 absl::Status TfLiteTensorsToDetectionsCalculator::Process(
     CalculatorContext* cc) {
+      //LOG(INFO) << "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!###################### " << std::endl;
   if ((!gpu_input_ && cc->Inputs().Tag(kTensorsTag).IsEmpty()) ||
       (gpu_input_ && cc->Inputs().Tag(kTensorsGpuTag).IsEmpty())) {
     return absl::OkStatus();
@@ -360,10 +361,57 @@ absl::Status TfLiteTensorsToDetectionsCalculator::ProcessCPU(
     // non-maximum suppression) within the model.
     RET_CHECK_EQ(input_tensors.size(), 4);
 
-    const TfLiteTensor* detection_boxes_tensor = &input_tensors[0];
-    const TfLiteTensor* detection_classes_tensor = &input_tensors[1];
-    const TfLiteTensor* detection_scores_tensor = &input_tensors[2];
-    const TfLiteTensor* num_boxes_tensor = &input_tensors[3];
+    //const TfLiteTensor* detection_boxes_tensor = &input_tensors[0];
+    //const TfLiteTensor* detection_classes_tensor = &input_tensors[1];
+    //const TfLiteTensor* detection_scores_tensor = &input_tensors[2];
+    //const TfLiteTensor* num_boxes_tensor = &input_tensors[3];
+
+    //////////////////////////////////////////
+    
+    std::string a = "StatefulPartitionedCall:3";
+    int index = 0;
+    for (int i=0; i<4; i++){
+      std::string tname(input_tensors[i].name);
+      if (tname == a){
+        index = i;
+      }
+    }
+    const TfLiteTensor* detection_boxes_tensor = &input_tensors[index];
+
+    a = "StatefulPartitionedCall:2";
+    index = 0;
+    for (int i=0; i<4; i++){
+      std::string tname(input_tensors[i].name);
+      if (tname == a){
+        index = i;
+      }
+    }
+    const TfLiteTensor* detection_classes_tensor = &input_tensors[index];
+
+    a = "StatefulPartitionedCall:1";
+    index = 0;
+    for (int i=0; i<4; i++){
+      std::string tname(input_tensors[i].name);
+      if (tname == a){
+        index = i;
+      }
+    }
+    const TfLiteTensor* detection_scores_tensor = &input_tensors[index];
+
+    a = "StatefulPartitionedCall:0";
+    index = 0;
+    for (int i=0; i<4; i++){
+      std::string tname(input_tensors[i].name);
+      if (tname == a){
+        index = i;
+      }
+    }
+    const TfLiteTensor* num_boxes_tensor = &input_tensors[index];
+
+    //LOG(INFO) << "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!###################### 0: detection_boxes_tensor (sb 3):" << detection_boxes_tensor->dims->size << ", name:" << detection_boxes_tensor->name << ",bytes:" << detection_boxes_tensor->bytes << std::endl;
+    //LOG(INFO) << "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!###################### 1: detection_classes_tensor (sb 2):" << detection_classes_tensor->dims->size << ", name:" << detection_classes_tensor->name << ",bytes:" << detection_classes_tensor->bytes << std::endl;
+    //LOG(INFO) << "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!###################### 2: detection_scores_tensor (sb 2):" << detection_scores_tensor->dims->size << ", name:" << detection_scores_tensor->name << ",bytes:" << detection_scores_tensor->bytes << std::endl;
+    //LOG(INFO) << "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!###################### 3: num_boxes_tensor (sb 1):" << num_boxes_tensor->dims->size << ", name:" << num_boxes_tensor->name << ",bytes:" << num_boxes_tensor->bytes << std::endl;
     RET_CHECK_EQ(num_boxes_tensor->dims->size, 1);
     RET_CHECK_EQ(num_boxes_tensor->dims->data[0], 1);
     const float* num_boxes = num_boxes_tensor->data.f;

@@ -63,6 +63,8 @@ namespace mediapipe {
 // stored with row padding for alignment purposes.
 class ImageFrame {
  public:
+  int uuid = 0;
+  
   typedef std::function<void(uint8*)> Deleter;
 
   // This class offers a few standard delete functions and retains
@@ -98,6 +100,8 @@ class ImageFrame {
   // Creates an empty ImageFrame. It will need to be initialized by some other
   // means.
   ImageFrame();
+
+  ~ImageFrame();
 
   // Allocate a frame of the appropriate size.  Does not zero it out.
   // Each row will be aligned to alignment_boundary.  alignment_boundary

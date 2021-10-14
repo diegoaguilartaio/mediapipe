@@ -78,6 +78,10 @@ ImageFrame::ImageFrame(ImageFormat::Format format, int width, int height,
 
 ImageFrame::ImageFrame(ImageFrame&& move_from) { *this = std::move(move_from); }
 
+ImageFrame::~ImageFrame() {
+  //LOG(INFO) << "Removing ImageFrame:" << uuid;
+}
+
 ImageFrame& ImageFrame::operator=(ImageFrame&& move_from) {
   pixel_data_ = std::move(move_from.pixel_data_);
   format_ = move_from.format_;
