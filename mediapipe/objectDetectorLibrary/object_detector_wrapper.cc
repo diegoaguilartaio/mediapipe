@@ -137,7 +137,48 @@ struct MediapipeObjectDetectorLibrary::impl {
       );
 
 
+    } else if (osType == "MULTILANDMARKSWITHHANDEDNESS")
+    {
+      static int a = 0;
+      
+      ASSIGN_OR_RETURN(mediapipe::OutputStreamPoller pollerXXX,
+                   graph.AddOutputStreamPoller("something"));
+      //mediapipe::OutputStreamPoller poller = graph->AddOutputStreamPoller("someghing");
+      
+      MP_RETURN_IF_ERROR(
+        graph->ObserveOutputStream(
+          os,
+          [this, a, labelTD](const mediapipe::Packet& packet) -> ::mediapipe::Status 
+          {
+            std::vector<std::vector<RelativeLandmark>> ret;
+            auto& output_Det = packet.Get<std::vector<mediapipe::NormalizedLandmarkList>>();
+            LOG(INFO) << "Number of Landmarks:" << output_Det.size() << std::endl;
+            for (const ::mediapipe::NormalizedLandmarkList& landmarkList : output_Det) {
+              LOG(INFO) << "LandmarkList size:" << landmarkList.landmark_size();
+              LOG(INFO) << "LandmarkList(0):" << landmarkList.landmark(0).x() << ", " << landmarkList.landmark(0).y() << ", " << landmarkList.landmark(0).z();
+              LOG(INFO) << "LandmarkList(5):" << landmarkList.landmark(5).x() << ", " << landmarkList.landmark(5).y() << ", " << landmarkList.landmark(5).z();
+              std::vector<RelativeLandmark> resultLandmarks;
+              for (int i=0; i<landmarkList.landmark_size(); i++){
+                RelativeLandmark resultLandmark;
+                resultLandmark.x = landmarkList.landmark(i).x();
+                resultLandmark.y = landmarkList.landmark(i).y();
+                resultLandmark.z = landmarkList.landmark(i).z();
+                resultLandmarks.push_back(resultLandmark);
+              }
+              ret.push_back(resultLandmarks);
+            }
+            if (resultCallbackForLandmarks != nullptr){
+              resultCallbackForLandmarks(resultCallbackContext, ret);
+            }
+            return mediapipe::OkStatus();
+          }
+        )
+      );
+
+
     }
+    
+    
     MP_RETURN_IF_ERROR(graph->StartRun({}));
     return absl::OkStatus();
   }
