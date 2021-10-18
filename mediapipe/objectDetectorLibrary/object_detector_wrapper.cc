@@ -27,6 +27,7 @@
 
 #include "mediapipe/framework/formats/detection.pb.h"
 #include "mediapipe/framework/formats/landmark.pb.h"
+#include "mediapipe/framework/formats/classification.pb.h"
 
     //constexpr char kInputStream[] = "input_video";
     //constexpr char kOutputStream[] = "output_detections";
@@ -41,7 +42,7 @@ struct MediapipeObjectDetectorLibrary::impl {
   std::unique_ptr<mediapipe::OutputStreamPoller> poller_det;
   absl::Status run_status;
   void (*resultCallback)(void*, RelativeBoundingBox) = nullptr;
-  void (*resultCallbackForLandmarks)(void*, std::vector<std::vector<RelativeLandmark>>) = nullptr;
+  void (*resultCallbackForLandmarks)(void*, std::vector<std::vector<RelativeLandmark>>, std::vector<std::string>) = nullptr;
   void* resultCallbackContext = nullptr;
 
 
@@ -129,7 +130,8 @@ struct MediapipeObjectDetectorLibrary::impl {
               ret.push_back(resultLandmarks);
             }
             if (resultCallbackForLandmarks != nullptr){
-              resultCallbackForLandmarks(resultCallbackContext, ret);
+              std::vector<std::string> emptyRet;
+              resultCallbackForLandmarks(resultCallbackContext, ret, emptyRet);
             }
             return mediapipe::OkStatus();
           }
@@ -139,18 +141,16 @@ struct MediapipeObjectDetectorLibrary::impl {
 
     } else if (osType == "MULTILANDMARKSWITHHANDEDNESS")
     {
-      static int a = 0;
-      
-      ASSIGN_OR_RETURN(mediapipe::OutputStreamPoller pollerXXX,
-                   graph.AddOutputStreamPoller("something"));
-      //mediapipe::OutputStreamPoller poller = graph->AddOutputStreamPoller("someghing");
-      
+      static bool landmarks_ready = false;
+      static bool handedness_ready = false;
+      static std::vector<std::vector<RelativeLandmark>> retLandmarks;
+      static std::vector<std::string> retHandedness;
+
       MP_RETURN_IF_ERROR(
         graph->ObserveOutputStream(
           os,
-          [this, a, labelTD](const mediapipe::Packet& packet) -> ::mediapipe::Status 
+          [this, labelTD](const mediapipe::Packet& packet) -> ::mediapipe::Status 
           {
-            std::vector<std::vector<RelativeLandmark>> ret;
             auto& output_Det = packet.Get<std::vector<mediapipe::NormalizedLandmarkList>>();
             LOG(INFO) << "Number of Landmarks:" << output_Det.size() << std::endl;
             for (const ::mediapipe::NormalizedLandmarkList& landmarkList : output_Det) {
@@ -165,16 +165,46 @@ struct MediapipeObjectDetectorLibrary::impl {
                 resultLandmark.z = landmarkList.landmark(i).z();
                 resultLandmarks.push_back(resultLandmark);
               }
-              ret.push_back(resultLandmarks);
+              retLandmarks.push_back(resultLandmarks);
             }
-            if (resultCallbackForLandmarks != nullptr){
-              resultCallbackForLandmarks(resultCallbackContext, ret);
+            landmarks_ready = true;
+            if ((resultCallbackForLandmarks != nullptr) && (landmarks_ready) && (handedness_ready)){
+              resultCallbackForLandmarks(resultCallbackContext, retLandmarks, retHandedness);
+              landmarks_ready = false;
+              handedness_ready = false;
+              retLandmarks.clear();
+              retHandedness.clear();
             }
             return mediapipe::OkStatus();
           }
         )
       );
 
+      MP_RETURN_IF_ERROR(
+        graph->ObserveOutputStream(
+          "handedness",
+          [this, labelTD](const mediapipe::Packet& packet) -> ::mediapipe::Status 
+          {
+            auto& output_Det = packet.Get<std::vector<mediapipe::ClassificationList>>();
+            for (const mediapipe::ClassificationList& handednessList : output_Det) {
+              if (handednessList.classification_size()>0) {
+                for (int i=0; i<handednessList.classification_size(); i++){
+                  retHandedness.push_back(handednessList.classification(i).label());
+                }
+              }
+            }
+            handedness_ready = true;
+            if ((resultCallbackForLandmarks != nullptr) && (landmarks_ready) && (handedness_ready)){
+              resultCallbackForLandmarks(resultCallbackContext, retLandmarks, retHandedness);
+              landmarks_ready = false;
+              handedness_ready = false;
+              retLandmarks.clear();
+              retHandedness.clear();
+            }
+            return mediapipe::OkStatus();
+          }
+        )
+      );
 
     }
     
@@ -285,7 +315,7 @@ void MediapipeObjectDetectorLibrary::setResultCallback(void* context, void (*cal
   pImpl->resultCallbackContext = context;
 }
 
-void MediapipeObjectDetectorLibrary::setResultCallbackForLandmarks(void* context, void (*callback)(void*, std::vector<std::vector<RelativeLandmark>>))
+void MediapipeObjectDetectorLibrary::setResultCallbackForLandmarks(void* context, void (*callback)(void*, std::vector<std::vector<RelativeLandmark>>, std::vector<std::string>))
 {
   pImpl->resultCallbackForLandmarks = callback;
   pImpl->resultCallbackContext = context;

@@ -50,6 +50,6 @@ public:
     int AddFrameToInputStream(unsigned char const * const inFrame);
     int ShutdownMPPGraph();
     void setResultCallback(void* context, void (*callback)(void*, RelativeBoundingBox));
-    void setResultCallbackForLandmarks(void* context, void (*callback)(void*, std::vector<std::vector<RelativeLandmark>>));
+    void setResultCallbackForLandmarks(void* context, void (*callback)(void*, std::vector<std::vector<RelativeLandmark>>, std::vector<std::string>));
 };
 
