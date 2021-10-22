@@ -315,7 +315,7 @@ Packet MakePacket(Args&&... args) {  // NOLINT(build/c++11)
 template <typename T,
           typename std::enable_if<std::is_array<T>::value>::type* = nullptr,
           typename... Args>
-Packet MakePacket(Args&&... args) {  // NOLINT(build/c++11)
+Packet MakePacket(Args&&... args) {  
   return Adopt(reinterpret_cast<T*>(
       new T{std::forward<typename std::remove_extent<T>::type>(args)...}));
 }

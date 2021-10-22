@@ -14,6 +14,7 @@
 //
 // An example of sending OpenCV webcam frames into a MediaPipe graph.
 #include "object_detector_wrapper.h"
+#include "json.hpp"
 
 #include "mediapipe/framework/calculator_framework.h"
 #include "mediapipe/framework/formats/image_frame.h"
@@ -29,10 +30,13 @@
 #include "mediapipe/framework/formats/landmark.pb.h"
 #include "mediapipe/framework/formats/classification.pb.h"
 
-    //constexpr char kInputStream[] = "input_video";
-    //constexpr char kOutputStream[] = "output_detections";
-    //std::string labelToDetect;
 
+using json = nlohmann::json;
+
+void to_json(json& j, const RelativeLandmark& p)
+{
+    j = {{"x", p.x}, {"y", p.y}, {"z", p.z}};
+}
 
 struct MediapipeObjectDetectorLibrary::impl {
   mediapipe::CalculatorGraph *graph;
@@ -42,8 +46,9 @@ struct MediapipeObjectDetectorLibrary::impl {
   std::unique_ptr<mediapipe::OutputStreamPoller> poller_det;
   absl::Status run_status;
   void (*resultCallback)(void*, RelativeBoundingBox) = nullptr;
-  void (*resultCallbackForLandmarks)(void*, std::vector<std::vector<RelativeLandmark>>, std::vector<std::string>) = nullptr;
+  void (*resultCallbackJSON)(void*, std::string) = nullptr;
   void* resultCallbackContext = nullptr;
+  json otherInputsJSON;
 
 
   absl::Status _initGraph(const char* customGraph) {
@@ -56,159 +61,124 @@ struct MediapipeObjectDetectorLibrary::impl {
     return graph->Initialize(config);
   }
 
-  absl::Status _startGraph(std::string os, std::string osType,std::string labelTD) {
+  absl::Status _startGraph(std::string configurationString) {
     LOG(INFO) << "Start running the calculator graph.";
 
-    if (osType == "DETECTIONS")
-    {
-      MP_RETURN_IF_ERROR(
-        graph->ObserveOutputStream(
-          os,
-          [this, labelTD](const mediapipe::Packet& packet) -> ::mediapipe::Status 
-          {
-            RelativeBoundingBox ret;
-            auto& output_Det = packet.Get<std::vector<mediapipe::Detection>>();
-            LOG(INFO) << "Number of detections:" << output_Det.size();
-            float score = 0;
-            for (const ::mediapipe::Detection& detection : output_Det) {
-              if (detection.label_size()>0)
+      json configJSON = json::parse(configurationString);
+      auto outputStreams = configJSON["outputStreams"];
+      for (auto& outputStream:outputStreams){
+        if (outputStream["type"] == "MULTILANDMARKS")
+        {
+          std::cout << "MULTILANDMARKS" << std::endl;
+          MP_RETURN_IF_ERROR(
+            graph->ObserveOutputStream(
+              outputStream["name"],
+              [this, outputStream](const mediapipe::Packet& packet) -> ::mediapipe::Status 
               {
-                if (detection.label(0) == labelTD) {
-                  ret.valid = true;
-                  ret.xmin = detection.location_data().relative_bounding_box().xmin();
-                  ret.ymin = detection.location_data().relative_bounding_box().ymin();
-                  ret.width = detection.location_data().relative_bounding_box().width();
-                  ret.height = detection.location_data().relative_bounding_box().height();
+                std::vector<std::vector<RelativeLandmark>> ret;
+                auto& output_Det = packet.Get<std::vector<mediapipe::NormalizedLandmarkList>>();
+                LOG(INFO) << "Number of Landmarks:" << output_Det.size() << std::endl;
+                for (const ::mediapipe::NormalizedLandmarkList& landmarkList : output_Det) {
+                  LOG(INFO) << "LandmarkList size:" << landmarkList.landmark_size();
+                  LOG(INFO) << "LandmarkList(0):" << landmarkList.landmark(0).x() << ", " << landmarkList.landmark(0).y() << ", " << landmarkList.landmark(0).z();
+                  LOG(INFO) << "LandmarkList(5):" << landmarkList.landmark(5).x() << ", " << landmarkList.landmark(5).y() << ", " << landmarkList.landmark(5).z();
+                  std::vector<RelativeLandmark> resultLandmarks;
+                  for (int i=0; i<landmarkList.landmark_size(); i++){
+                    RelativeLandmark resultLandmark;
+                    resultLandmark.x = landmarkList.landmark(i).x();
+                    resultLandmark.y = landmarkList.landmark(i).y();
+                    resultLandmark.z = landmarkList.landmark(i).z();
+                    resultLandmarks.push_back(resultLandmark);
+                  }
+                  ret.push_back(resultLandmarks);
+                }
+                if (resultCallbackJSON != nullptr){
+                  json JSONret;
+                  JSONret["name"] = outputStream["name"];
+                  JSONret["type"] = outputStream["type"];
+                  JSONret["ret"] = ret;
+                  resultCallbackJSON(resultCallbackContext, JSONret.dump());
+                }
+                return mediapipe::OkStatus();
+              }
+            )
+          );
+        }        
+        if (outputStream["type"] == "HANDEDNESS")
+        {
+          std::cout << "HANDEDNESS" << std::endl;
+          MP_RETURN_IF_ERROR(
+            graph->ObserveOutputStream(
+              outputStream["name"],
+              [this,outputStream](const mediapipe::Packet& packet) -> ::mediapipe::Status 
+              {
+                std::vector<std::string> ret;
+                auto& output_Det = packet.Get<std::vector<mediapipe::ClassificationList>>();
+                for (const mediapipe::ClassificationList& handednessList : output_Det) {
+                  if (handednessList.classification_size()>0) {
+                    for (int i=0; i<handednessList.classification_size(); i++){
+                      ret.push_back(handednessList.classification(i).label());
+                    }
+                  }
+                }
+                if (resultCallbackJSON != nullptr){
+                  json JSONret;
+                  JSONret["name"] = outputStream["name"];
+                  JSONret["type"] = outputStream["type"];
+                  JSONret["ret"] = ret;
+                  resultCallbackJSON(resultCallbackContext, JSONret.dump());
+                }
+                return mediapipe::OkStatus();
+              }
+            )
+          );
+        }
+        if (outputStream["type"] == "DETECTIONS")
+        {
+          MP_RETURN_IF_ERROR(
+            graph->ObserveOutputStream(
+              outputStream["name"],
+              [this, outputStream](const mediapipe::Packet& packet) -> ::mediapipe::Status 
+              {
+                RelativeBoundingBox ret;
+                auto& output_Det = packet.Get<std::vector<mediapipe::Detection>>();
+                LOG(INFO) << "Number of detections:" << output_Det.size();
+                float score = 0;
+                for (const ::mediapipe::Detection& detection : output_Det) {
+                  if (detection.label_size()>0)
+                  {
+                    if (detection.label(0) == outputStream["detectLabel"]) {
+                      ret.valid = true;
+                      ret.xmin = detection.location_data().relative_bounding_box().xmin();
+                      ret.ymin = detection.location_data().relative_bounding_box().ymin();
+                      ret.width = detection.location_data().relative_bounding_box().width();
+                      ret.height = detection.location_data().relative_bounding_box().height();
+                    }
+                    if (resultCallback != nullptr){
+                      resultCallback(resultCallbackContext, ret);
+                    }
+                  }else{
+                    LOG(INFO) << "Detection does not have label," << detection.location_data().format();
+                    if (detection.score(0) > score){
+                      LOG(INFO) << "score:" << detection.score(0);
+                      score = detection.score(0);
+                      ret.valid = true;
+                      ret.xmin = detection.location_data().relative_bounding_box().xmin();
+                      ret.ymin = detection.location_data().relative_bounding_box().ymin();
+                      ret.width = detection.location_data().relative_bounding_box().width();
+                      ret.height = detection.location_data().relative_bounding_box().height();
+                    }
+                  }              
                 }
                 if (resultCallback != nullptr){
                   resultCallback(resultCallbackContext, ret);
                 }
-              }else{
-                LOG(INFO) << "Detection does not have label," << detection.location_data().format();
-                if (detection.score(0) > score){
-                  LOG(INFO) << "score:" << detection.score(0);
-                  score = detection.score(0);
-                  ret.valid = true;
-                  ret.xmin = detection.location_data().relative_bounding_box().xmin();
-                  ret.ymin = detection.location_data().relative_bounding_box().ymin();
-                  ret.width = detection.location_data().relative_bounding_box().width();
-                  ret.height = detection.location_data().relative_bounding_box().height();
-                }
-              }              
-            }
-            if (resultCallback != nullptr){
-              resultCallback(resultCallbackContext, ret);
-            }
-
-            return mediapipe::OkStatus();
-          }
-        )
-      );
-    } else if (osType == "MULTILANDMARKS")
-    {
-
-      MP_RETURN_IF_ERROR(
-        graph->ObserveOutputStream(
-          os,
-          [this, labelTD](const mediapipe::Packet& packet) -> ::mediapipe::Status 
-          {
-            std::vector<std::vector<RelativeLandmark>> ret;
-            auto& output_Det = packet.Get<std::vector<mediapipe::NormalizedLandmarkList>>();
-            LOG(INFO) << "Number of Landmarks:" << output_Det.size() << std::endl;
-            for (const ::mediapipe::NormalizedLandmarkList& landmarkList : output_Det) {
-              LOG(INFO) << "LandmarkList size:" << landmarkList.landmark_size();
-              LOG(INFO) << "LandmarkList(0):" << landmarkList.landmark(0).x() << ", " << landmarkList.landmark(0).y() << ", " << landmarkList.landmark(0).z();
-              LOG(INFO) << "LandmarkList(5):" << landmarkList.landmark(5).x() << ", " << landmarkList.landmark(5).y() << ", " << landmarkList.landmark(5).z();
-              std::vector<RelativeLandmark> resultLandmarks;
-              for (int i=0; i<landmarkList.landmark_size(); i++){
-                RelativeLandmark resultLandmark;
-                resultLandmark.x = landmarkList.landmark(i).x();
-                resultLandmark.y = landmarkList.landmark(i).y();
-                resultLandmark.z = landmarkList.landmark(i).z();
-                resultLandmarks.push_back(resultLandmark);
+                return mediapipe::OkStatus();
               }
-              ret.push_back(resultLandmarks);
-            }
-            if (resultCallbackForLandmarks != nullptr){
-              std::vector<std::string> emptyRet;
-              resultCallbackForLandmarks(resultCallbackContext, ret, emptyRet);
-            }
-            return mediapipe::OkStatus();
-          }
-        )
-      );
-
-
-    } else if (osType == "MULTILANDMARKSWITHHANDEDNESS")
-    {
-      static bool landmarks_ready = false;
-      static bool handedness_ready = false;
-      static std::vector<std::vector<RelativeLandmark>> retLandmarks;
-      static std::vector<std::string> retHandedness;
-
-      MP_RETURN_IF_ERROR(
-        graph->ObserveOutputStream(
-          os,
-          [this, labelTD](const mediapipe::Packet& packet) -> ::mediapipe::Status 
-          {
-            auto& output_Det = packet.Get<std::vector<mediapipe::NormalizedLandmarkList>>();
-            LOG(INFO) << "Number of Landmarks:" << output_Det.size() << std::endl;
-            for (const ::mediapipe::NormalizedLandmarkList& landmarkList : output_Det) {
-              LOG(INFO) << "LandmarkList size:" << landmarkList.landmark_size();
-              LOG(INFO) << "LandmarkList(0):" << landmarkList.landmark(0).x() << ", " << landmarkList.landmark(0).y() << ", " << landmarkList.landmark(0).z();
-              LOG(INFO) << "LandmarkList(5):" << landmarkList.landmark(5).x() << ", " << landmarkList.landmark(5).y() << ", " << landmarkList.landmark(5).z();
-              std::vector<RelativeLandmark> resultLandmarks;
-              for (int i=0; i<landmarkList.landmark_size(); i++){
-                RelativeLandmark resultLandmark;
-                resultLandmark.x = landmarkList.landmark(i).x();
-                resultLandmark.y = landmarkList.landmark(i).y();
-                resultLandmark.z = landmarkList.landmark(i).z();
-                resultLandmarks.push_back(resultLandmark);
-              }
-              retLandmarks.push_back(resultLandmarks);
-            }
-            landmarks_ready = true;
-            if ((resultCallbackForLandmarks != nullptr) && (landmarks_ready) && (handedness_ready)){
-              resultCallbackForLandmarks(resultCallbackContext, retLandmarks, retHandedness);
-              landmarks_ready = false;
-              handedness_ready = false;
-              retLandmarks.clear();
-              retHandedness.clear();
-            }
-            return mediapipe::OkStatus();
-          }
-        )
-      );
-
-      MP_RETURN_IF_ERROR(
-        graph->ObserveOutputStream(
-          "handedness",
-          [this, labelTD](const mediapipe::Packet& packet) -> ::mediapipe::Status 
-          {
-            auto& output_Det = packet.Get<std::vector<mediapipe::ClassificationList>>();
-            for (const mediapipe::ClassificationList& handednessList : output_Det) {
-              if (handednessList.classification_size()>0) {
-                for (int i=0; i<handednessList.classification_size(); i++){
-                  retHandedness.push_back(handednessList.classification(i).label());
-                }
-              }
-            }
-            handedness_ready = true;
-            if ((resultCallbackForLandmarks != nullptr) && (landmarks_ready) && (handedness_ready)){
-              resultCallbackForLandmarks(resultCallbackContext, retLandmarks, retHandedness);
-              landmarks_ready = false;
-              handedness_ready = false;
-              retLandmarks.clear();
-              retHandedness.clear();
-            }
-            return mediapipe::OkStatus();
-          }
-        )
-      );
-
-    }
-    
-    
+            )
+          );
+        }
+      }
     MP_RETURN_IF_ERROR(graph->StartRun({}));
     return absl::OkStatus();
   }
@@ -217,26 +187,31 @@ struct MediapipeObjectDetectorLibrary::impl {
 
     LOG(INFO) << "Shutting down.";
     MP_RETURN_IF_ERROR(graph->CloseInputStream(is));
+    for (auto& otherInput: this->otherInputsJSON)
+    {
+      MP_RETURN_IF_ERROR(graph->CloseInputStream(otherInput["name"]));
+    }
     return graph->WaitUntilDone();
   }
-
 };
 
 MediapipeObjectDetectorLibrary::MediapipeObjectDetectorLibrary(
-  const char* inputStreamName, 
-  const char* ouputStreamName, 
-  const char* ouputStreamType, 
-  const char* label ) : pImpl(std::make_unique<impl>())
+  const char* configJSON ) : pImpl(std::make_unique<impl>())
 {
-  kInputStream = inputStreamName;
-  kOutputStream = ouputStreamName;
-  kOutputStreamType = ouputStreamType;
-  labelToDetect = label;
+  configString = configJSON;
+  json jsonC = json::parse(configString);
+  kInputStream = jsonC["inputStreams"]["inputStream"];
+  pImpl->otherInputsJSON = jsonC["inputStreams"]["others"];
 }
 
 MediapipeObjectDetectorLibrary::~MediapipeObjectDetectorLibrary()
 {
 
+}
+
+void MediapipeObjectDetectorLibrary::setOtherInputsString(std::string otherInputsString)
+{
+  pImpl->otherInputsJSON = json::parse(otherInputsString);
 }
 
 int MediapipeObjectDetectorLibrary::initApp(const char * logtostderr) {
@@ -267,7 +242,7 @@ int MediapipeObjectDetectorLibrary::initGraph(const char* customGraph) {
 }
 
 int MediapipeObjectDetectorLibrary::startGraph() {
-  absl::Status retStatus = pImpl->_startGraph(kOutputStream, kOutputStreamType, labelToDetect);
+  absl::Status retStatus = pImpl->_startGraph(configString);
   if (!retStatus.ok()) {
     LOG(ERROR) << "Failed startGraph: " << retStatus.message();
     return EXIT_FAILURE;
@@ -294,9 +269,34 @@ int MediapipeObjectDetectorLibrary::AddFrameToInputStream(unsigned char const * 
   // Send image packet into the graph.
   size_t frame_timestamp_us =
       (double)cv::getTickCount() / (double)cv::getTickFrequency() * 1e6;
+  for (auto& otherInput: pImpl->otherInputsJSON)
+  {
+    if (otherInput["type"].get<std::string>() == "bool") {
+      absl::Status retStatus2 = pImpl->graph->AddPacketToInputStream(
+        otherInput["name"].get<std::string>(), mediapipe::Adopt(new bool(otherInput["value"].get<bool>()))
+                          .At(mediapipe::Timestamp(frame_timestamp_us)));
+      if (!retStatus2.ok()) {
+        LOG(ERROR) << "Failed AddFrameToInputStream: " << otherInput["name"].get<std::string>()<< ", " << retStatus2.message();
+      }
+  
+    } else if (otherInput["type"].get<std::string>() == "int") {
+      absl::Status retStatus3 = pImpl->graph->AddPacketToInputStream(
+        otherInput["name"].get<std::string>(), mediapipe::Adopt(new int(otherInput["value"].get<int>()))
+                          .At(mediapipe::Timestamp(frame_timestamp_us)));  
+      if (!retStatus3.ok()) {
+        LOG(ERROR) << "Failed AddFrameToInputStream: " << otherInput["name"].get<std::string>()<< ", " << retStatus3.message();
+      }
+
+    } else if (otherInput["type"].get<std::string>() == "string") {
+      absl::Status retStatus4 = pImpl->graph->AddPacketToInputStream(
+        otherInput["name"].get<std::string>(), mediapipe::Adopt(new std::string(otherInput["value"].get<std::string>()))
+                          .At(mediapipe::Timestamp(frame_timestamp_us)));  
+    } 
+  }
   absl::Status retStatus = pImpl->graph->AddPacketToInputStream(
       kInputStream, mediapipe::Adopt(input_frame.release())
                         .At(mediapipe::Timestamp(frame_timestamp_us)));
+
   if (!retStatus.ok()) {
     LOG(ERROR) << "Failed AddFrameToInputStream: " << retStatus.message();
   }
@@ -315,8 +315,9 @@ void MediapipeObjectDetectorLibrary::setResultCallback(void* context, void (*cal
   pImpl->resultCallbackContext = context;
 }
 
-void MediapipeObjectDetectorLibrary::setResultCallbackForLandmarks(void* context, void (*callback)(void*, std::vector<std::vector<RelativeLandmark>>, std::vector<std::string>))
+
+void MediapipeObjectDetectorLibrary::setResultCallbackJSON(void* context, void (*callback)(void*, std::string))
 {
-  pImpl->resultCallbackForLandmarks = callback;
+  pImpl->resultCallbackJSON = callback;
   pImpl->resultCallbackContext = context;
 }

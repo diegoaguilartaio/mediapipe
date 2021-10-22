@@ -1,7 +1,7 @@
 cc_library(
     name = "object_detector_wrapper",
     srcs = ["object_detector_wrapper.cc"],
-    hdrs = ["object_detector_wrapper.h"],
+    hdrs = ["object_detector_wrapper.h", "json.hpp"],
     deps = [
         "//mediapipe/framework:calculator_framework",
         "//mediapipe/framework/formats:image_frame",
@@ -13,6 +13,7 @@ cc_library(
         "//mediapipe/framework/port:parse_text_proto",
         "//mediapipe/framework/port:status",
         "//mediapipe/calculators/core:packet_presence_calculator",
+        "//mediapipe/calculators/core:gate_calculator",
         "//mediapipe/framework/formats:detection_cc_proto",
         "//mediapipe/framework/formats:landmark_cc_proto",
         "//mediapipe/graphs/hand_tracking:desktop_tflite_calculators",

@@ -901,7 +901,6 @@ absl::Status CalculatorGraph::AddPacketToInputStreamInternal(
     return error_status;
   }
   (*stream)->PropagateUpdatesToMirrors();
-
   VLOG(2) << "Packet added directly to: " << stream_name;
   // Note: one reason why we need to call the scheduler here is that we have
   // re-throttled the graph input streams, and we may need to unthrottle them

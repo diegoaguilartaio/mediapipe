@@ -27,22 +27,18 @@ private:
     struct impl;
     std::experimental::propagate_const<std::unique_ptr<impl>> pImpl;
     std::string kInputStream;
-    std::string kOutputStream;
-    std::string kOutputStreamType;
-
-    std::string labelToDetect;
+    std::string configString;
 
 public:
     /**
      * @brief Construct a new Mediapipe Object Detector Library object
      * 
-     * @param inputStreamName String containing the name of the graph input stream
-     * @param ouputStreamName String containing the name of the graph ouput stream
-     * @param label String containing the label to find Ex. "Jar"
+     * @param configJSON String containing a JSON with the configuration
      */
-    MediapipeObjectDetectorLibrary(const char* inputStreamName, const char* ouputStreamName, const char* outputStreamType, const char* label);
+    MediapipeObjectDetectorLibrary(const char* configJSON);
     ~MediapipeObjectDetectorLibrary();
 
+    void setOtherInputsString(std::string otherInputsString);
     int initApp(const char * logtostderr);
     int endApp();
     int initGraph(const char* customGraph);
@@ -50,6 +46,6 @@ public:
     int AddFrameToInputStream(unsigned char const * const inFrame);
     int ShutdownMPPGraph();
     void setResultCallback(void* context, void (*callback)(void*, RelativeBoundingBox));
-    void setResultCallbackForLandmarks(void* context, void (*callback)(void*, std::vector<std::vector<RelativeLandmark>>, std::vector<std::string>));
+    void setResultCallbackJSON(void* context, void (*callback)(void*, std::string));
 };
 
