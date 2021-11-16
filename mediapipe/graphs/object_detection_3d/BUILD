@@ -60,6 +60,7 @@ cc_library(
         "//mediapipe/calculators/video:opencv_video_encoder_calculator",
         "//mediapipe/graphs/object_detection_3d/subgraphs:renderer_cpu",
         "//mediapipe/modules/objectron:objectron_cpu",
+        "//mediapipe/modules/objectron:objectron_cpu_nutella",
     ],
 )
 

@@ -135,6 +135,23 @@ mediapipe_simple_subgraph(
 )
 
 mediapipe_simple_subgraph(
+    name = "object_detection_cpu_nutella",
+    graph = "object_detection_cpu_nutella.pbtxt",
+    register_as = "ObjectDetectionNutellaSubgraph",
+    deps = [
+        "//mediapipe/calculators/image:image_transformation_calculator",
+        "//mediapipe/calculators/tflite:tflite_converter_calculator",
+        "//mediapipe/calculators/tflite:tflite_inference_calculator",
+        "//mediapipe/calculators/tflite:tflite_tensors_to_detections_calculator",
+        "//mediapipe/calculators/tflite:ssd_anchors_calculator",
+        "//mediapipe/calculators/util:detection_label_id_to_text_calculator",
+        "//mediapipe/calculators/util:non_max_suppression_calculator",
+        "//mediapipe/modules/objectron/calculators:filter_detection_calculator",
+    ],
+)
+
+
+mediapipe_simple_subgraph(
     name = "objectron_cpu",
     graph = "objectron_cpu.pbtxt",
     register_as = "ObjectronCpuSubgraph",
@@ -158,6 +175,32 @@ mediapipe_simple_subgraph(
         "//mediapipe/modules/objectron/calculators:lift_2d_frame_annotation_to_3d_calculator",
     ],
 )
+
+mediapipe_simple_subgraph(
+    name = "objectron_cpu_nutella",
+    graph = "objectron_cpu_nutella.pbtxt",
+    register_as = "ObjectronCpuNutellaSubgraph",
+    deps = [
+        ":box_landmark_cpu",
+        ":object_detection_cpu_nutella",
+        "//mediapipe/calculators/core:begin_loop_calculator",
+        "//mediapipe/calculators/core:clip_vector_size_calculator",
+        "//mediapipe/calculators/core:constant_side_packet_calculator",
+        "//mediapipe/calculators/core:end_loop_calculator",
+        "//mediapipe/calculators/core:gate_calculator",
+        "//mediapipe/calculators/core:previous_loopback_calculator",
+        "//mediapipe/calculators/image:image_properties_calculator",
+        "//mediapipe/calculators/tflite:tflite_model_calculator",
+        "//mediapipe/calculators/util:association_norm_rect_calculator",
+        "//mediapipe/calculators/util:collection_has_min_size_calculator",
+        "//mediapipe/calculators/util:detections_to_rects_calculator",
+        "//mediapipe/calculators/util:local_file_contents_calculator",
+        "//mediapipe/modules/objectron/calculators:frame_annotation_to_rect_calculator",
+        "//mediapipe/modules/objectron/calculators:landmarks_to_frame_annotation_calculator",
+        "//mediapipe/modules/objectron/calculators:lift_2d_frame_annotation_to_3d_calculator",
+    ],
+)
+
 
 mediapipe_simple_subgraph(
     name = "objectron_gpu",

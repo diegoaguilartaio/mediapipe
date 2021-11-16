@@ -7,6 +7,7 @@
 struct RelativeBoundingBox {
     bool valid = false;
     bool endCapture = false;
+    std::string label;
     float xmin;
     float ymin;
     float width;

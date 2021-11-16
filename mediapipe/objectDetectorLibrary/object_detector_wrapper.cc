@@ -103,6 +103,36 @@ struct MediapipeObjectDetectorLibrary::impl {
               }
             )
           );
+        }
+        if (outputStream["type"] == "LANDMARKS")
+        {
+          std::cout << "LANDMARKS" << std::endl;
+          MP_RETURN_IF_ERROR(
+            graph->ObserveOutputStream(
+              outputStream["name"],
+              [this, outputStream](const mediapipe::Packet& packet) -> ::mediapipe::Status 
+              {
+                std::vector<RelativeLandmark> ret;
+                auto& landmarkList = packet.Get<mediapipe::NormalizedLandmarkList>();
+                LOG(INFO) << "LandmarkList size:" << landmarkList.landmark_size();
+                for (int i=0; i<landmarkList.landmark_size(); i++){
+                  RelativeLandmark resultLandmark;
+                  resultLandmark.x = landmarkList.landmark(i).x();
+                  resultLandmark.y = landmarkList.landmark(i).y();
+                  resultLandmark.z = landmarkList.landmark(i).z();
+                  ret.push_back(resultLandmark);
+                }                  
+                if (resultCallbackJSON != nullptr){
+                  json JSONret;
+                  JSONret["name"] = outputStream["name"];
+                  JSONret["type"] = outputStream["type"];
+                  JSONret["ret"] = ret;
+                  resultCallbackJSON(resultCallbackContext, JSONret.dump());
+                }
+                return mediapipe::OkStatus();
+              }
+            )
+          );
         }        
         if (outputStream["type"] == "HANDEDNESS")
         {
@@ -144,18 +174,25 @@ struct MediapipeObjectDetectorLibrary::impl {
                 auto& output_Det = packet.Get<std::vector<mediapipe::Detection>>();
                 LOG(INFO) << "Number of detections:" << output_Det.size();
                 float score = 0;
-                for (const ::mediapipe::Detection& detection : output_Det) {
+                for (const ::mediapipe::Detection& detection : output_Det) 
+                {
                   if (detection.label_size()>0)
                   {
-                    if (detection.label(0) == outputStream["detectLabel"]) {
-                      ret.valid = true;
-                      ret.xmin = detection.location_data().relative_bounding_box().xmin();
-                      ret.ymin = detection.location_data().relative_bounding_box().ymin();
-                      ret.width = detection.location_data().relative_bounding_box().width();
-                      ret.height = detection.location_data().relative_bounding_box().height();
-                    }
-                    if (resultCallback != nullptr){
-                      resultCallback(resultCallbackContext, ret);
+                    for (auto&detectLabel : outputStream["detectLabel"])
+                    {
+                      if (detection.label(0) == detectLabel) 
+                      {
+                        ret.valid = true;
+                        ret.label = detection.label(0);
+                        ret.xmin = detection.location_data().relative_bounding_box().xmin();
+                        ret.ymin = detection.location_data().relative_bounding_box().ymin();
+                        ret.width = detection.location_data().relative_bounding_box().width();
+                        ret.height = detection.location_data().relative_bounding_box().height();
+                      }
+                      if (resultCallback != nullptr)
+                      {
+                        resultCallback(resultCallbackContext, ret);
+                      }
                     }
                   }else{
                     LOG(INFO) << "Detection does not have label," << detection.location_data().format();
