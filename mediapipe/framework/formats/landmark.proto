@@ -65,6 +65,8 @@ message NormalizedLandmark {
 // Group of NormalizedLandmark protos.
 message NormalizedLandmarkList {
   repeated NormalizedLandmark landmark = 1;
+  optional string label = 2;
+  optional int32 label_id = 3;
 }
 
 // Group of NormalizedLandmarkList protos.

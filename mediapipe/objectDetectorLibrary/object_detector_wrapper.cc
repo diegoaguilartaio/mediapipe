@@ -166,6 +166,28 @@ struct MediapipeObjectDetectorLibrary::impl {
             )
           );
         }
+        if (outputStream["type"] == "INT32") {
+          std::cout << "INT" << std::endl;
+          MP_RETURN_IF_ERROR(
+            graph->ObserveOutputStream(
+              outputStream["name"],
+              [this,outputStream](const mediapipe::Packet& packet) -> ::mediapipe::Status 
+              {
+                int32 ret = packet.Get<int32>();                
+                if (resultCallbackJSON != nullptr){
+                  json JSONret;
+                  JSONret["name"] = outputStream["name"];
+                  JSONret["type"] = outputStream["type"];
+                  JSONret["timestamp"] = packet.Timestamp().Value();
+                  JSONret["ret"] = ret;
+                  resultCallbackJSON(resultCallbackContext, JSONret.dump());
+                }
+                return mediapipe::OkStatus();
+              }
+            )
+          );
+
+        }
         if (outputStream["type"] == "DETECTIONS")
         {
           MP_RETURN_IF_ERROR(

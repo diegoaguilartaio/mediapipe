@@ -398,6 +398,20 @@ cc_library(
 )
 
 cc_library(
+    name = "detection_to_label_id_calculator",
+    srcs = ["detection_to_label_id_calculator.cc"],
+    visibility = ["//visibility:public"],
+    deps = [
+        "//mediapipe/framework:calculator_framework",
+        "//mediapipe/framework/formats:detection_cc_proto",
+        "//mediapipe/framework/port:ret_check",
+        "//mediapipe/framework/port:status",
+    ],
+    alwayslink = 1,
+)
+
+
+cc_library(
     name = "filter_detections_calculator",
     srcs = ["filter_detections_calculator.cc"],
     visibility = ["//visibility:public"],
