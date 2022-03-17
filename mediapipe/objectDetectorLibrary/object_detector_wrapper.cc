@@ -96,6 +96,7 @@ struct MediapipeObjectDetectorLibrary::impl {
                   json JSONret;
                   JSONret["name"] = outputStream["name"];
                   JSONret["type"] = outputStream["type"];
+                  JSONret["timestamp"] = packet.Timestamp().Value();
                   JSONret["ret"] = ret;
                   resultCallbackJSON(resultCallbackContext, JSONret.dump());
                 }
@@ -126,6 +127,7 @@ struct MediapipeObjectDetectorLibrary::impl {
                   json JSONret;
                   JSONret["name"] = outputStream["name"];
                   JSONret["type"] = outputStream["type"];
+                  JSONret["timestamp"] = packet.Timestamp().Value();
                   JSONret["ret"] = ret;
                   resultCallbackJSON(resultCallbackContext, JSONret.dump());
                 }
@@ -155,6 +157,7 @@ struct MediapipeObjectDetectorLibrary::impl {
                   json JSONret;
                   JSONret["name"] = outputStream["name"];
                   JSONret["type"] = outputStream["type"];
+                  JSONret["timestamp"] = packet.Timestamp().Value();
                   JSONret["ret"] = ret;
                   resultCallbackJSON(resultCallbackContext, JSONret.dump());
                 }
