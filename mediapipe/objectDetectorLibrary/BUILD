@@ -14,6 +14,8 @@ cc_library(
         "//mediapipe/framework/port:status",
         "//mediapipe/calculators/core:packet_presence_calculator",
         "//mediapipe/calculators/util:detection_to_label_id_calculator",
+        "//mediapipe/framework/tool:switch_demux_calculator",
+        "//mediapipe/framework/tool:switch_mux_calculator",
         "//mediapipe/calculators/core:gate_calculator",
         "//mediapipe/calculators/util:local_file_contents_calculator",
         "//mediapipe/calculators/tflite:tflite_model_calculator",
