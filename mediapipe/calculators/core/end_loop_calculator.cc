@@ -19,6 +19,7 @@
 #include "mediapipe/framework/formats/classification.pb.h"
 #include "mediapipe/framework/formats/landmark.pb.h"
 #include "mediapipe/framework/formats/rect.pb.h"
+#include "mediapipe/framework/formats/detection.pb.h"
 #include "mediapipe/util/render_data.pb.h"
 #include "tensorflow/lite/interpreter.h"
 
@@ -35,6 +36,11 @@ REGISTER_CALCULATOR(EndLoopLandmarkListVectorCalculator);
 typedef EndLoopCalculator<std::vector<::mediapipe::NormalizedLandmarkList>>
     EndLoopNormalizedLandmarkListVectorCalculator;
 REGISTER_CALCULATOR(EndLoopNormalizedLandmarkListVectorCalculator);
+
+typedef EndLoopCalculator<std::vector<::mediapipe::Detection>>
+    EndLoopDetectionCalculator;
+REGISTER_CALCULATOR(EndLoopDetectionCalculator);
+
 
 typedef EndLoopCalculator<std::vector<bool>> EndLoopBooleanCalculator;
 REGISTER_CALCULATOR(EndLoopBooleanCalculator);

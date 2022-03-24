@@ -410,6 +410,20 @@ cc_library(
     alwayslink = 1,
 )
 
+cc_library(
+    name = "add_landmarks_to_detection_calculator",
+    srcs = ["add_landmarks_to_detection_calculator.cc"],
+    visibility = ["//visibility:public"],
+    deps = [
+        "//mediapipe/framework:calculator_framework",
+        "//mediapipe/framework/formats:detection_cc_proto",
+        "//mediapipe/framework/formats:landmark_cc_proto",
+        "//mediapipe/framework/formats:location_data_cc_proto",
+        "//mediapipe/framework/port:ret_check",
+        "//mediapipe/framework/port:status",
+    ],
+    alwayslink = 1,
+)
 
 cc_library(
     name = "filter_detections_calculator",
