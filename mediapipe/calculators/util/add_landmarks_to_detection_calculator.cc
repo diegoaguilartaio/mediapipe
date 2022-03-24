@@ -37,18 +37,6 @@ absl::Status addLandmarksToDetection(const Detection& detection,
   auto landmarks_out = absl::make_unique<NormalizedLandmarkList>();
   landmarks_out->CopyFrom(landmarks);
   detection_out->set_allocated_landmark_list(landmarks_out.get());
-
-
-  
-  //const auto& location_data = detection.location_data();
-  //for (int i = 0; i < location_data.relative_keypoints_size(); ++i) {
-  //  const auto& keypoint = location_data.relative_keypoints(i);
-//
-  //  auto* landmark = landmarks->add_landmark();
-  //  landmark->set_x(keypoint.x());
-  //  landmark->set_y(keypoint.y());
-  //}
-
   return absl::OkStatus();
 }
 
