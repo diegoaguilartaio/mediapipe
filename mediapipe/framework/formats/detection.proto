@@ -23,6 +23,7 @@ syntax = "proto2";
 package mediapipe;
 
 import "mediapipe/framework/formats/location_data.proto";
+import "mediapipe/framework/formats/landmark.proto";
 
 option java_package = "com.google.mediapipe.formats.proto";
 option java_outer_classname = "DetectionProto";
@@ -59,6 +60,8 @@ message Detection {
   // The timestamp (in microseconds) *at which* this detection was
   // created/detected.
   optional int64 timestamp_usec = 10;
+
+  optional NormalizedLandmarkList landmark_list = 11;
 }
 
 // Group of Detection protos.

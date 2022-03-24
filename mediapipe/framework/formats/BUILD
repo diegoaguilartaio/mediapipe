@@ -27,7 +27,7 @@ mediapipe_proto_library(
     name = "detection_proto",
     srcs = ["detection.proto"],
     visibility = ["//visibility:public"],
-    deps = ["//mediapipe/framework/formats:location_data_proto"],
+    deps = ["//mediapipe/framework/formats:location_data_proto", "//mediapipe/framework/formats:landmark_proto"],
 )
 
 mediapipe_register_type(
