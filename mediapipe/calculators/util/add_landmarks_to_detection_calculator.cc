@@ -29,14 +29,14 @@ namespace {
 constexpr char kDetectionTag[] = "DETECTION";
 constexpr char kLandmarksTag[] = "LANDMARKS";
 
+
 absl::Status addLandmarksToDetection(const Detection& detection,
                                          const NormalizedLandmarkList& landmarks,
                                          Detection* detection_out) {
   
   detection_out->CopyFrom(detection);
-  auto landmarks_out = absl::make_unique<NormalizedLandmarkList>();
+  auto landmarks_out = detection_out->mutable_landmark_list();
   landmarks_out->CopyFrom(landmarks);
-  detection_out->set_allocated_landmark_list(landmarks_out.get());
   return absl::OkStatus();
 }
 
