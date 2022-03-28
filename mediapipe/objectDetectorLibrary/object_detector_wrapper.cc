@@ -30,6 +30,8 @@
 #include "mediapipe/framework/formats/landmark.pb.h"
 #include "mediapipe/framework/formats/classification.pb.h"
 
+#include <google/protobuf/util/json_util.h>
+
 
 using json = nlohmann::json;
 
@@ -197,10 +199,23 @@ struct MediapipeObjectDetectorLibrary::impl {
               {
                 RelativeBoundingBox ret;
                 auto& output_Det = packet.Get<std::vector<mediapipe::Detection>>();
+                
                 LOG(INFO) << "Number of detections:" << output_Det.size();
                 float score = 0;
                 for (const ::mediapipe::Detection& detection : output_Det) 
                 {
+                  std::string retJson;
+                  google::protobuf::util::MessageToJsonString(detection, &retJson);
+                  if (resultCallbackJSON != nullptr){
+                    json JSONret;
+                    JSONret["name"] = outputStream["name"];
+                    JSONret["type"] = outputStream["type"];
+                    JSONret["timestamp"] = packet.Timestamp().Value();
+                    JSONret["ret"] = retJson;
+                    resultCallbackJSON(resultCallbackContext, JSONret.dump());
+                  }
+
+                  
                   if (detection.label_size()>0)
                   {
                     for (auto&detectLabel : outputStream["detectLabel"])
