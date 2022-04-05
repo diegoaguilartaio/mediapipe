@@ -57,7 +57,7 @@ if [ -z "$1" ]
     mkdir opencv/release
     #cd opencv_contrib
     #git checkout 3.4
-    #cd ../opencv
+    cd ../opencv
     #git checkout 3.4
     cd release
     cmake .. -DCMAKE_BUILD_TYPE=RELEASE -DCMAKE_INSTALL_PREFIX=/usr/local \
