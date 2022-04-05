@@ -52,13 +52,13 @@ if [ -z "$1" ]
     rm -rf /tmp/build_opencv
     mkdir /tmp/build_opencv
     cd /tmp/build_opencv
-    git clone https://github.com/opencv/opencv_contrib.git
-    git clone https://github.com/opencv/opencv.git
+    git clone --depth 1 https://github.com/opencv/opencv_contrib.git -b 3.4
+    git clone --depth 1 https://github.com/opencv/opencv.git -b 3.4
     mkdir opencv/release
-    cd opencv_contrib
-    git checkout 3.4
-    cd ../opencv
-    git checkout 3.4
+    #cd opencv_contrib
+    #git checkout 3.4
+    #cd ../opencv
+    #git checkout 3.4
     cd release
     cmake .. -DCMAKE_BUILD_TYPE=RELEASE -DCMAKE_INSTALL_PREFIX=/usr/local \
           -DBUILD_TESTS=OFF -DBUILD_PERF_TESTS=OFF -DBUILD_opencv_ts=OFF \
