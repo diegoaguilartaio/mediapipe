@@ -98,7 +98,7 @@ node {
   output_stream: "FLAG:box_presence"
   options: {
     [mediapipe.ThresholdingCalculatorOptions.ext] {
-      threshold: 0.99
+      threshold: 0.000001
     }
   }
 }

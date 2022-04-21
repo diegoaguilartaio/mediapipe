@@ -78,29 +78,33 @@ struct MediapipeObjectDetectorLibrary::impl {
               [this, outputStream](const mediapipe::Packet& packet) -> ::mediapipe::Status 
               {
                 std::vector<std::vector<RelativeLandmark>> ret;
-                auto& output_Det = packet.Get<std::vector<mediapipe::NormalizedLandmarkList>>();
-                LOG(INFO) << "Number of Landmarks:" << output_Det.size() << std::endl;
-                for (const ::mediapipe::NormalizedLandmarkList& landmarkList : output_Det) {
-                  LOG(INFO) << "LandmarkList size:" << landmarkList.landmark_size();
-                  LOG(INFO) << "LandmarkList(0):" << landmarkList.landmark(0).x() << ", " << landmarkList.landmark(0).y() << ", " << landmarkList.landmark(0).z();
-                  LOG(INFO) << "LandmarkList(5):" << landmarkList.landmark(5).x() << ", " << landmarkList.landmark(5).y() << ", " << landmarkList.landmark(5).z();
-                  std::vector<RelativeLandmark> resultLandmarks;
-                  for (int i=0; i<landmarkList.landmark_size(); i++){
-                    RelativeLandmark resultLandmark;
-                    resultLandmark.x = landmarkList.landmark(i).x();
-                    resultLandmark.y = landmarkList.landmark(i).y();
-                    resultLandmark.z = landmarkList.landmark(i).z();
-                    resultLandmarks.push_back(resultLandmark);
+                //TODO: add packet.IsEmpty()
+                if (!packet.IsEmpty())
+                {
+                  auto& output_Det = packet.Get<std::vector<mediapipe::NormalizedLandmarkList>>();
+                  LOG(INFO) << "Number of Landmarks:" << output_Det.size() << std::endl;
+                  for (const ::mediapipe::NormalizedLandmarkList& landmarkList : output_Det) {
+                    LOG(INFO) << "LandmarkList size:" << landmarkList.landmark_size();
+                    LOG(INFO) << "LandmarkList(0):" << landmarkList.landmark(0).x() << ", " << landmarkList.landmark(0).y() << ", " << landmarkList.landmark(0).z();
+                    LOG(INFO) << "LandmarkList(5):" << landmarkList.landmark(5).x() << ", " << landmarkList.landmark(5).y() << ", " << landmarkList.landmark(5).z();
+                    std::vector<RelativeLandmark> resultLandmarks;
+                    for (int i=0; i<landmarkList.landmark_size(); i++){
+                      RelativeLandmark resultLandmark;
+                      resultLandmark.x = landmarkList.landmark(i).x();
+                      resultLandmark.y = landmarkList.landmark(i).y();
+                      resultLandmark.z = landmarkList.landmark(i).z();
+                      resultLandmarks.push_back(resultLandmark);
+                    }
+                    ret.push_back(resultLandmarks);
                   }
-                  ret.push_back(resultLandmarks);
-                }
-                if (resultCallbackJSON != nullptr){
-                  json JSONret;
-                  JSONret["name"] = outputStream["name"];
-                  JSONret["type"] = outputStream["type"];
-                  JSONret["timestamp"] = packet.Timestamp().Value();
-                  JSONret["ret"] = ret;
-                  resultCallbackJSON(resultCallbackContext, JSONret.dump());
+                  if (resultCallbackJSON != nullptr){
+                    json JSONret;
+                    JSONret["name"] = outputStream["name"];
+                    JSONret["type"] = outputStream["type"];
+                    JSONret["timestamp"] = packet.Timestamp().Value();
+                    JSONret["ret"] = ret;
+                    resultCallbackJSON(resultCallbackContext, JSONret.dump());
+                  }
                 }
                 return mediapipe::OkStatus();
               }
