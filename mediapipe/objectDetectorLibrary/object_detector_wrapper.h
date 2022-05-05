@@ -36,13 +36,13 @@ public:
      * 
      * @param configJSON String containing a JSON with the configuration
      */
-    MediapipeObjectDetectorLibrary(const char* configJSON);
+    MediapipeObjectDetectorLibrary();
     ~MediapipeObjectDetectorLibrary();
 
     void setOtherInputsString(std::string otherInputsString);
     int initApp(const char * logtostderr);
     int endApp();
-    int initGraph(const char* customGraph);
+    int initGraph(const char* customGraph, const char* configJSON);
     int startGraph();
     int AddFrameToInputStream(unsigned char const * const inFrame);
     int ShutdownMPPGraph();

@@ -276,13 +276,8 @@ struct MediapipeObjectDetectorLibrary::impl {
   }
 };
 
-MediapipeObjectDetectorLibrary::MediapipeObjectDetectorLibrary(
-  const char* configJSON ) : pImpl(std::make_unique<impl>())
+MediapipeObjectDetectorLibrary::MediapipeObjectDetectorLibrary() : pImpl(std::make_unique<impl>())
 {
-  configString = configJSON;
-  json jsonC = json::parse(configString);
-  kInputStream = jsonC["inputStreams"]["inputStream"];
-  pImpl->otherInputsJSON = jsonC["inputStreams"]["others"];
 }
 
 MediapipeObjectDetectorLibrary::~MediapipeObjectDetectorLibrary()
@@ -311,7 +306,12 @@ int MediapipeObjectDetectorLibrary::endApp() {
   return 0;
 }
 
-int MediapipeObjectDetectorLibrary::initGraph(const char* customGraph) {
+int MediapipeObjectDetectorLibrary::initGraph(const char* customGraph, const char* configJSON) {
+  configString = configJSON;
+  json jsonC = json::parse(configString);
+  kInputStream = jsonC["inputStreams"]["inputStream"];
+  pImpl->otherInputsJSON = jsonC["inputStreams"]["others"];  
+  
   absl::Status retStatus = pImpl->_initGraph(customGraph);
   if (!retStatus.ok()) {
     LOG(ERROR) << "Failed initGraph: " << retStatus.message();
