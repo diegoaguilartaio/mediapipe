@@ -35,7 +35,7 @@
 
 using json = nlohmann::json;
 
-void to_json(json& j, const RelativeLandmark& p)
+void to_json(json& j, const RelativeLandmarkMP& p)
 {
     j = {{"x", p.x}, {"y", p.y}, {"z", p.z}};
 }
@@ -47,8 +47,9 @@ struct MediapipeObjectDetectorLibrary::impl {
   std::unique_ptr<mediapipe::OutputStreamPoller> poller_;
   std::unique_ptr<mediapipe::OutputStreamPoller> poller_det;
   absl::Status run_status;
-  void (*resultCallback)(void*, RelativeBoundingBox) = nullptr;
+  void (*resultCallback)(void*, RelativeBoundingBoxMP) = nullptr;
   void (*resultCallbackJSON)(void*, std::string) = nullptr;
+  ResultCallbackJSONLambdaSignature resultCallbackJSONLambda = nullptr;
   void* resultCallbackContext = nullptr;
   json otherInputsJSON;
 
@@ -77,7 +78,7 @@ struct MediapipeObjectDetectorLibrary::impl {
               outputStream["name"],
               [this, outputStream](const mediapipe::Packet& packet) -> ::mediapipe::Status 
               {
-                std::vector<std::vector<RelativeLandmark>> ret;
+                std::vector<std::vector<RelativeLandmarkMP>> ret;
                 //TODO: add packet.IsEmpty()
                 if (!packet.IsEmpty())
                 {
@@ -87,9 +88,9 @@ struct MediapipeObjectDetectorLibrary::impl {
                     LOG(INFO) << "LandmarkList size:" << landmarkList.landmark_size();
                     LOG(INFO) << "LandmarkList(0):" << landmarkList.landmark(0).x() << ", " << landmarkList.landmark(0).y() << ", " << landmarkList.landmark(0).z();
                     LOG(INFO) << "LandmarkList(5):" << landmarkList.landmark(5).x() << ", " << landmarkList.landmark(5).y() << ", " << landmarkList.landmark(5).z();
-                    std::vector<RelativeLandmark> resultLandmarks;
+                    std::vector<RelativeLandmarkMP> resultLandmarks;
                     for (int i=0; i<landmarkList.landmark_size(); i++){
-                      RelativeLandmark resultLandmark;
+                      RelativeLandmarkMP resultLandmark;
                       resultLandmark.x = landmarkList.landmark(i).x();
                       resultLandmark.y = landmarkList.landmark(i).y();
                       resultLandmark.z = landmarkList.landmark(i).z();
@@ -97,14 +98,18 @@ struct MediapipeObjectDetectorLibrary::impl {
                     }
                     ret.push_back(resultLandmarks);
                   }
+                  json JSONret;
+                  JSONret["name"] = outputStream["name"];
+                  JSONret["type"] = outputStream["type"];
+                  JSONret["timestamp"] = packet.Timestamp().Value();
+                  JSONret["ret"] = ret;
                   if (resultCallbackJSON != nullptr){
-                    json JSONret;
-                    JSONret["name"] = outputStream["name"];
-                    JSONret["type"] = outputStream["type"];
-                    JSONret["timestamp"] = packet.Timestamp().Value();
-                    JSONret["ret"] = ret;
                     resultCallbackJSON(resultCallbackContext, JSONret.dump());
                   }
+                  if (resultCallbackJSONLambda != nullptr){
+                    resultCallbackJSONLambda(JSONret.dump());
+                  }
+
                 }
                 return mediapipe::OkStatus();
               }
@@ -119,23 +124,26 @@ struct MediapipeObjectDetectorLibrary::impl {
               outputStream["name"],
               [this, outputStream](const mediapipe::Packet& packet) -> ::mediapipe::Status 
               {
-                std::vector<RelativeLandmark> ret;
+                std::vector<RelativeLandmarkMP> ret;
                 auto& landmarkList = packet.Get<mediapipe::NormalizedLandmarkList>();
                 LOG(INFO) << "LandmarkList size:" << landmarkList.landmark_size();
                 for (int i=0; i<landmarkList.landmark_size(); i++){
-                  RelativeLandmark resultLandmark;
+                  RelativeLandmarkMP resultLandmark;
                   resultLandmark.x = landmarkList.landmark(i).x();
                   resultLandmark.y = landmarkList.landmark(i).y();
                   resultLandmark.z = landmarkList.landmark(i).z();
                   ret.push_back(resultLandmark);
                 }                  
+                json JSONret;
+                JSONret["name"] = outputStream["name"];
+                JSONret["type"] = outputStream["type"];
+                JSONret["timestamp"] = packet.Timestamp().Value();
+                JSONret["ret"] = ret;
                 if (resultCallbackJSON != nullptr){
-                  json JSONret;
-                  JSONret["name"] = outputStream["name"];
-                  JSONret["type"] = outputStream["type"];
-                  JSONret["timestamp"] = packet.Timestamp().Value();
-                  JSONret["ret"] = ret;
                   resultCallbackJSON(resultCallbackContext, JSONret.dump());
+                }
+                if (resultCallbackJSONLambda != nullptr){
+                  resultCallbackJSONLambda(JSONret.dump());
                 }
                 return mediapipe::OkStatus();
               }
@@ -159,13 +167,16 @@ struct MediapipeObjectDetectorLibrary::impl {
                     }
                   }
                 }
+                json JSONret;
+                JSONret["name"] = outputStream["name"];
+                JSONret["type"] = outputStream["type"];
+                JSONret["timestamp"] = packet.Timestamp().Value();
+                JSONret["ret"] = ret;
                 if (resultCallbackJSON != nullptr){
-                  json JSONret;
-                  JSONret["name"] = outputStream["name"];
-                  JSONret["type"] = outputStream["type"];
-                  JSONret["timestamp"] = packet.Timestamp().Value();
-                  JSONret["ret"] = ret;
                   resultCallbackJSON(resultCallbackContext, JSONret.dump());
+                }
+                if (resultCallbackJSONLambda != nullptr){
+                  resultCallbackJSONLambda(JSONret.dump());
                 }
                 return mediapipe::OkStatus();
               }
@@ -180,13 +191,16 @@ struct MediapipeObjectDetectorLibrary::impl {
               [this,outputStream](const mediapipe::Packet& packet) -> ::mediapipe::Status 
               {
                 int32 ret = packet.Get<int32>();                
+                json JSONret;
+                JSONret["name"] = outputStream["name"];
+                JSONret["type"] = outputStream["type"];
+                JSONret["timestamp"] = packet.Timestamp().Value();
+                JSONret["ret"] = ret;
                 if (resultCallbackJSON != nullptr){
-                  json JSONret;
-                  JSONret["name"] = outputStream["name"];
-                  JSONret["type"] = outputStream["type"];
-                  JSONret["timestamp"] = packet.Timestamp().Value();
-                  JSONret["ret"] = ret;
                   resultCallbackJSON(resultCallbackContext, JSONret.dump());
+                }
+                if (resultCallbackJSONLambda != nullptr){
+                  resultCallbackJSONLambda(JSONret.dump());
                 }
                 return mediapipe::OkStatus();
               }
@@ -201,7 +215,7 @@ struct MediapipeObjectDetectorLibrary::impl {
               outputStream["name"],
               [this, outputStream](const mediapipe::Packet& packet) -> ::mediapipe::Status 
               {
-                RelativeBoundingBox ret;
+                RelativeBoundingBoxMP ret;
                 auto& output_Det = packet.Get<std::vector<mediapipe::Detection>>();
                 
                 LOG(INFO) << "Number of detections:" << output_Det.size();
@@ -210,15 +224,17 @@ struct MediapipeObjectDetectorLibrary::impl {
                 {
                   std::string retJson;
                   google::protobuf::util::MessageToJsonString(detection, &retJson);
+                  json JSONret;
+                  JSONret["name"] = outputStream["name"];
+                  JSONret["type"] = outputStream["type"];
+                  JSONret["timestamp"] = packet.Timestamp().Value();
+                  JSONret["ret"] = retJson;
                   if (resultCallbackJSON != nullptr){
-                    json JSONret;
-                    JSONret["name"] = outputStream["name"];
-                    JSONret["type"] = outputStream["type"];
-                    JSONret["timestamp"] = packet.Timestamp().Value();
-                    JSONret["ret"] = retJson;
                     resultCallbackJSON(resultCallbackContext, JSONret.dump());
                   }
-
+                  if (resultCallbackJSONLambda != nullptr){
+                    resultCallbackJSONLambda(JSONret.dump());
+                  }
                   
                   if (detection.label_size()>0)
                   {
@@ -333,10 +349,12 @@ int MediapipeObjectDetectorLibrary::startGraph() {
   return 0;
 }
 
-int MediapipeObjectDetectorLibrary::AddFrameToInputStream(unsigned char const * const inFrame) {
+int MediapipeObjectDetectorLibrary::AddFrameToInputStream(FrameInfo const * const inFrame) {
 
-  cv::Mat frame(480,640, CV_8UC3, (void *) inFrame);
-
+  cv::Mat inputFrame(inFrame->Height, inFrame->Width, CV_8UC3, (void*)(inFrame->Data));
+  cv::Mat frame;
+  cv::resize(inputFrame, frame, cv::Size(640,480));
+  
   cv::Mat camera_frame;
   cv::cvtColor(frame, camera_frame, cv::COLOR_BGR2RGB);
 
@@ -390,7 +408,7 @@ int MediapipeObjectDetectorLibrary::ShutdownMPPGraph() {
    return 0;
 }
 
-void MediapipeObjectDetectorLibrary::setResultCallback(void* context, void (*callback)(void*, RelativeBoundingBox))
+void MediapipeObjectDetectorLibrary::setResultCallback(void* context, void (*callback)(void*, RelativeBoundingBoxMP))
 {
   pImpl->resultCallback = callback;
   pImpl->resultCallbackContext = context;
@@ -401,4 +419,10 @@ void MediapipeObjectDetectorLibrary::setResultCallbackJSON(void* context, void (
 {
   pImpl->resultCallbackJSON = callback;
   pImpl->resultCallbackContext = context;
+}
+
+
+void MediapipeObjectDetectorLibrary::setResultCallbackJSONLambda(ResultCallbackJSONLambdaSignature callback)
+{
+  pImpl->resultCallbackJSONLambda = callback;
 }

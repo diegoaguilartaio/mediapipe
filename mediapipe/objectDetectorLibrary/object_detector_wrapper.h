@@ -1,10 +1,14 @@
+#include <functional>
 #include <cstdlib>
 #include <memory>
 #include <experimental/propagate_const>
 #include <string>
 #include <vector>
+#include "Common.h"
 
-struct RelativeBoundingBox {
+typedef std::function<void(std::string)> ResultCallbackJSONLambdaSignature;
+
+struct RelativeBoundingBoxMP {
     bool valid = false;
     bool endCapture = false;
     std::string label;
@@ -14,7 +18,7 @@ struct RelativeBoundingBox {
     float height;
 };
 
-struct RelativeLandmark {
+struct RelativeLandmarkMP {
     float x;
     float y;
     float z;
@@ -44,9 +48,10 @@ public:
     int endApp();
     int initGraph(const char* customGraph, const char* configJSON);
     int startGraph();
-    int AddFrameToInputStream(unsigned char const * const inFrame);
+    int AddFrameToInputStream(FrameInfo const * const inFrame);
     int ShutdownMPPGraph();
-    void setResultCallback(void* context, void (*callback)(void*, RelativeBoundingBox));
+    void setResultCallback(void* context, void (*callback)(void*, RelativeBoundingBoxMP));
     void setResultCallbackJSON(void* context, void (*callback)(void*, std::string));
+    void setResultCallbackJSONLambda(ResultCallbackJSONLambdaSignature callback);
 };
 

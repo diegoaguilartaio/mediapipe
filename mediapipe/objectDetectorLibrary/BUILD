@@ -1,7 +1,7 @@
 cc_library(
     name = "object_detector_wrapper",
     srcs = ["object_detector_wrapper.cc"],
-    hdrs = ["object_detector_wrapper.h", "json.hpp"],
+    hdrs = ["object_detector_wrapper.h", "json.hpp", "Common.h"],
     deps = [
         "//mediapipe/framework:calculator_framework",
         "//mediapipe/framework/formats:image_frame",
